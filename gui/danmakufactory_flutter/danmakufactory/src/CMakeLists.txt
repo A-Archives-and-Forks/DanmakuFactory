@@ -28,6 +28,8 @@ message(WARNING "====================")
 #xmake的一些目录
 if (WIN32)
     string(REPLACE "windows/flutter/ephemeral/.plugin_symlinks/" "" XMAKE_FILE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xmake")
+elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    string(REPLACE "linux/flutter/ephemeral/.plugin_symlinks/" "" XMAKE_FILE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xmake")
 else()
     set(XMAKE_FILE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/xmake)
 endif()
@@ -164,6 +166,46 @@ elseif(WIN32)
 
 elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     message(WARNING "Compiling: Linux")
+    # 获取当前架构(去除换行)
+    execute_process(
+        COMMAND uname -m
+        OUTPUT_VARIABLE LINUX_ARCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    # 定义xmake Linux编译的so输出路径
+    set(XMAKE_LINUX_BUILD_OUTPUT_SO ${XMAKE_BUILD_OUTPUT}/linux/${LINUX_ARCH}/lib${DANMAKU_FACTORY_CORE_LIB_NAME}.so)
+    # 定义Linux标准的 so 存放路径
+    set(LINUX_DEFAULT_LIBS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../linux/libs/${LINUX_ARCH})
+
+    # 设置xmake编译的danmakufactory_core的导入规则
+    set_target_properties(${DANMAKU_FACTORY_CORE_LIB_NAME} PROPERTIES
+        IMPORTED_NO_SONAME TRUE
+        IMPORTED_LOCATION ${XMAKE_LINUX_BUILD_OUTPUT_SO}
+    )
+
+    # 执行编译脚本xmake生成文件,并在生成后自动拷贝
+    add_custom_command(
+        OUTPUT "${XMAKE_LINUX_BUILD_OUTPUT_SO}"
+        # 设置工作目录
+        WORKING_DIRECTORY "${XMAKE_FILE_DIR}"
+        # 执行 Linux xmake 编译脚本
+        COMMAND xmake f -y -p linux -a ${LINUX_ARCH} -P .
+        COMMAND xmake -P .
+        # 创建目录
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${LINUX_DEFAULT_LIBS_DIR}"
+        # 拷贝生成文件到打包目录
+        COMMAND ${CMAKE_COMMAND} -E copy "${XMAKE_LINUX_BUILD_OUTPUT_SO}" "${LINUX_DEFAULT_LIBS_DIR}"
+        COMMENT "=> 正在执行 xmake 编译并拷贝"
+        VERBATIM
+    )
+
+    # 包装成一个构建目标
+    add_custom_target(BUILD_XMAKE_DANMAKU_CORE DEPENDS "${XMAKE_LINUX_BUILD_OUTPUT_SO}")
+    # 依赖copy源文件
+    add_dependencies(BUILD_XMAKE_DANMAKU_CORE COPY_DANMAKU_FACTORY_CORE)
+
+    install(FILES "${XMAKE_LINUX_BUILD_OUTPUT_SO}" DESTINATION "lib")
+
 elseif(APPLE)
     if(CMAKE_SYSTEM_NAME MATCHES "iOS")
         message(WARNING "Compiling: iOS")
@@ -182,6 +224,8 @@ add_library(danmakufactory SHARED
 set_target_properties(danmakufactory PROPERTIES
   PUBLIC_HEADER danmakufactory.h
   OUTPUT_NAME "danmakufactory"
+  BUILD_WITH_INSTALL_RPATH TRUE
+  INSTALL_RPATH "$ORIGIN"
 )
 
 target_compile_definitions(danmakufactory PUBLIC DART_SHARED_LIB)

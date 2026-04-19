@@ -62,9 +62,11 @@ flutter build windows --release
 # macOS打包
 flutter build macos
 
+# 虚拟机ui倒置问题运行
+LIBGL_ALWAYS_SOFTWARE=1 flutter run -d linux
+
 # Linux打包
-flutter build linux
-flutter build linux --debug
+flutter build linux --release
 
 # Android release 包
 flutter build apk --release
