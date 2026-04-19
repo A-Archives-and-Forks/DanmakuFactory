@@ -70,14 +70,15 @@ if(CMAKE_SYSTEM_NAME MATCHES "OHOS" OR OHOS)
     add_custom_command(
         OUTPUT "${XMAKE_OH_BUILD_OUTPUT_SO}"
         # 设置工作目录
-        WORKING_DIRECTORY "${XMAKE_BUILD_SCRIPT}"
+        WORKING_DIRECTORY "${XMAKE_FILE_DIR}"
         # 执行 oh xmake 编译脚本
-        COMMAND cmd.exe /c "${XMAKE_BUILD_SCRIPT}/ohXmakeBuild.bat" "${OHOS_ARCH}" "${OHOS_NATIVE_SDK}"
+        COMMAND xmake f -y -p harmony -a ${OHOS_ARCH} --sdk=${OHOS_NATIVE_SDK} --bin=${OHOS_NATIVE_SDK}/llvm/bin -P .
+        COMMAND xmake -P .
         # 创建目录
         COMMAND ${CMAKE_COMMAND} -E make_directory "${OHOS_DEFAULT_LIBS_DIR}"
         # 拷贝生成文件到打包目录
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${XMAKE_OH_BUILD_OUTPUT_SO}" "${OHOS_DEFAULT_LIBS_DIR}"
-        COMMENT "=> 正在执行 bat 编译并拷贝"
+        COMMENT "=> 正在执行 xmake 编译并拷贝"
         VERBATIM
     )
 
@@ -103,14 +104,15 @@ elseif(ANDROID)
     add_custom_command(
         OUTPUT "${XMAKE_ANDROID_BUILD_OUTPUT_SO}"
         # 设置工作目录
-        WORKING_DIRECTORY "${XMAKE_BUILD_SCRIPT}"
+        WORKING_DIRECTORY "${XMAKE_FILE_DIR}"
         # 执行 Android xmake 编译脚本
-        COMMAND cmd.exe /c "${XMAKE_BUILD_SCRIPT}/androidXmakeBuild.bat" "${ANDROID_ABI}" "${CMAKE_ANDROID_NDK}"
+        COMMAND xmake f -y -p android --ndk=${CMAKE_ANDROID_NDK} -a ${ANDROID_ABI} -P .
+        COMMAND xmake -P .
         # 创建目录
         COMMAND ${CMAKE_COMMAND} -E make_directory "${ANDROID_DEFAULT_LIBS_DIR}"
         # 拷贝生成文件到安卓 jniLibs 打包目录
         COMMAND ${CMAKE_COMMAND} -E copy "${XMAKE_ANDROID_BUILD_OUTPUT_SO}" "${ANDROID_DEFAULT_LIBS_DIR}"
-        COMMENT "=> 正在执行 bat 编译并拷贝"
+        COMMENT "=> 正在执行 xmake 编译并拷贝"
         VERBATIM
     )
 
@@ -145,9 +147,11 @@ elseif(WIN32)
     add_custom_command(
         OUTPUT "${XMAKE_WIN_BUILD_OUTPUT_DLL}"
         # 设置工作目录
-        WORKING_DIRECTORY "${XMAKE_BUILD_SCRIPT}"
+        WORKING_DIRECTORY "${XMAKE_FILE_DIR}"
         # 执行批处理文件
-        COMMAND cmd.exe /c "${XMAKE_BUILD_SCRIPT}/winXmakeBuild.bat" "${WIN_ABI_NAME}"
+        #COMMAND cmd.exe /c "${XMAKE_BUILD_SCRIPT}/winXmakeBuild.bat" "${WIN_ABI_NAME}"
+        COMMAND cmd.exe /c "xmake f -y -p windows -a ${WIN_ABI_NAME} -P ."
+        COMMAND cmd.exe /c "xmake -P ."
         # 创建目录
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/runner/Debug"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/runner/Release"
